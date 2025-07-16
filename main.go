@@ -28,23 +28,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Connected to MySQL!")
-}
-
-func nameHandler(w http.ResponseWriter, r *http.Request) {
-	name := strings.TrimPrefix(r.URL.Path, "/name/")
-	fmt.Fprintf(w, "Hello %s", name)
-}
-
-type Message struct {
-	Message string `json:"message"`
-}
-
-func jsonNameHandler(w http.ResponseWriter, r *http.Request) {
-	name := strings.TrimPrefix(r.URL.Path, "/json/")
-	response := Message{Message: "Hello " + name}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	fmt.Println("✅ Connected to MySQL")
 }
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +40,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
@@ -70,9 +54,8 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("User created:", user.FirstName)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "User created Successfully.")
+	fmt.Fprint(w, "✅ User created successfully.")
 }
 
 func getUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -117,13 +100,12 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var user User
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	_, err = db.Exec(`
-        UPDATE users SET firstName=?, lastName=?, email=?, password=?, age=?
-        WHERE id=?`,
+        UPDATE users SET firstName=?, lastName=?, email=?, password=?, age=? WHERE id=?`,
 		user.FirstName, user.LastName, user.Email, user.Password, user.Age, id)
 
 	if err != nil {
@@ -131,9 +113,8 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("User updated:", id)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "User updated Successfully.")
+	fmt.Fprint(w, "✅ User updated successfully.")
 }
 
 func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -155,19 +136,64 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("User deleted:", id)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "User deleted Successfully.")
+	fmt.Fprint(w, "✅ User deleted successfully.")
+}
+
+func getUsersHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Use GET method only", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.Query("SELECT id, firstName, lastName, email, password, age FROM users")
+	if err != nil {
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var users []User
+
+	for rows.Next() {
+		var user User
+		err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password, &user.Age)
+		if err != nil {
+			http.Error(w, "Error reading user", http.StatusInternalServerError)
+			return
+		}
+		users = append(users, user)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func nameHandler(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimPrefix(r.URL.Path, "/name/")
+	fmt.Fprintf(w, "Hello %s", name)
+}
+
+type Message struct {
+	Message string `json:"message"`
+}
+
+func jsonNameHandler(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimPrefix(r.URL.Path, "/json/")
+	response := Message{Message: "Hello " + name}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func main() {
-	http.HandleFunc("/name/", nameHandler)
-	http.HandleFunc("/json/", jsonNameHandler)
 	http.HandleFunc("/create-user", createUserHandler)
 	http.HandleFunc("/get-user/", getUserHandler)
 	http.HandleFunc("/update-user/", updateUserHandler)
 	http.HandleFunc("/delete-user/", deleteUserHandler)
+	http.HandleFunc("/get-users", getUsersHandler)
+	http.HandleFunc("/name/", nameHandler)
+	http.HandleFunc("/json/", jsonNameHandler)
 
-	fmt.Println("Server running at http://localhost:8080")
+	fmt.Println("🚀 Server running at http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
