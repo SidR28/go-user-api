@@ -24,7 +24,7 @@ var db *sql.DB
 
 func init() {
 	var err error
-	db, err = sql.Open("mysql", "root:Honey.7511@tcp(127.0.0.1:3306)/go_api")
+	db, err = sql.Open("mysql", "root:password@tcp(127.0.0.1:3306)/go_api")
 	if err != nil {
 		panic(err)
 	}
